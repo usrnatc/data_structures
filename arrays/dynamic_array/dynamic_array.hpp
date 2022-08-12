@@ -30,5 +30,12 @@ class DynamicArray
         void removeFrom(int index);
         void removeAll(T data);
 
+        int findFirst(T data);
+        int findLast(T data);
+
+        void quicksort();
+        void bubblesort();
+        void mergesort();
+
         void display();
 };
