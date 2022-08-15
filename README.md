@@ -19,3 +19,8 @@
 - trie
 - heap
 - graph
+
+## sorts:
+ - bubble
+ - merge
+ - quick
