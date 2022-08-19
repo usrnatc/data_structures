@@ -7,6 +7,7 @@
  */
 
 #include <iostream>
+#include <algorithm>
 
 #include "dynamic_array.hpp"
 
@@ -29,36 +30,44 @@ DynamicArray<T>::~DynamicArray()
     this->size = 0;
 }
 
-/* FIXME: memory leak in new call */
 template <typename T>
-void DynamicArray<T>::expand(unsigned int newSpace)
+void DynamicArray<T>::setSize(int newSize)
 {
-    this->size += newSpace;
-    T *tmp = new T[this->size];
-
-    copy(this->data, this->data + this->used, tmp);
-    delete[] this->data;
-
-    this->data = tmp;
+    this->used = newSize;
 }
 
 template <typename T>
-void DynamicArray<T>::shrink()
+void DynamicArray<T>::setCapacity(int newCapacity)
 {
-    for (unsigned int i = this->used; i < this->size; i++) {
+    this->size = newCapacity;
+}
 
-        free(this->data[i]);
-    }
-    this->size = this->used;
+template <typename T>
+void DynamicArray<T>::setData(T *newData) {
+
+    this->data = newData;
+}
+
+template <typename T>
+void DynamicArray<T>::expand(unsigned int newSpace)
+{
+    this->setCapacity(this->getCapacity() + newSpace);
+    /* FIXME: valgrind specifies memory leak from new call */
+    T *tmp = new T[this->getCapacity()];
+
+    copy(this->getData(), this->getData() + this->getSize(), tmp);
+    delete[] this->getData();
+
+    this->setData(tmp);
 }
 
 template <typename T>
 void DynamicArray<T>::display()
 {
     cout << "[ ";
-    for (unsigned int i = 0; i < this->used; i++) {
+    for (unsigned int i = 0; i < this->getSize(); i++) {
 
-        cout << this->data[i] << ", ";
+        cout << this->getData()[i] << ", ";
     }
     cout << "]" << endl;
 }
@@ -66,36 +75,80 @@ void DynamicArray<T>::display()
 template <typename T>
 void DynamicArray<T>::append(T data)
 {
-    if (this->used == this->size) {
+    if (this->getSize() == this->getCapacity()) {
 
         this->expand(1);
     }
 
-    this->data[this->used++] = data;
+    this->getData()[this->getSize()] = data;
+    this->setSize(this->getSize() + 1);
 }
 
 template <typename T>
 void DynamicArray<T>::chop()
 {
-    this->removeFrom(this->used - 1);
+    this->removeFrom(this->getSize() - 1);
 }
 
+/* TODO: maybe should use copy instead of manually mutating */
 template <typename T>
 void DynamicArray<T>::insertAt(T data, int index)
 {
-    return;
+    if (index < 0 || index > this->getSize())
+        return;
+
+    if (index == this->getSize())
+        this->append(data);
+
+    if (this->getSize() == this->getCapacity())
+        this->expand(1);
+
+    this->setSize(this->getSize() + 1);
+    for (unsigned int i = this->getSize(); i > index; i--) {
+
+        this->getData()[i] = this->getData()[i - 1];
+    }
+
+    this->getData()[index] = data;
 }
 
+/* TODO: maybe should use copy instead of manually mutating */
 template <typename T>
 void DynamicArray<T>::removeFrom(int index)
 {
-    return;
+    if (index < 0 || index > this->getSize())
+        return;
+
+    if (index == this->getSize())
+        this->chop();
+
+    for (unsigned int i = index; i < this->getSize(); i++) {
+
+        this->getData()[i] = this->getData()[i + 1];
+    }
+    
+    this->setSize(this->getSize() - 1);
 }
 
 template <typename T>
 void DynamicArray<T>::removeAll(T data)
 {
+    unsigned int cnt = 0;
 
+    for (unsigned int i = 0; i < this->getSize(); i++) {
+
+        if (this->getData()[i] != data)
+            cnt++;
+    }
+
+    T *tmp = new T[cnt];
+
+    copy_if(this->getData(), this->getData() + this->getSize(), tmp,
+            [data](T elem) { return elem != data; });
+
+    delete[] this->getData();
+    this->setData(tmp);
+    this->setSize(cnt);
 }
 
 template <typename T>
@@ -103,9 +156,9 @@ int DynamicArray<T>::findFirst(T data)
 {
     int ret = -1;
 
-    for (unsigned int i = 0; i < this->used; i++) {
+    for (unsigned int i = 0; i <= this->getSize(); i++) {
 
-        if (data == this->data[i]) {
+        if (data == this->getData()[i]) {
 
             ret = i;
             break;
@@ -120,9 +173,9 @@ int DynamicArray<T>::findLast(T data)
 {
     int ret = -1;
 
-    for (unsigned int i = this->used - 1; i >= 0; i--) {
+    for (unsigned int i = this->getSize() - 1; i >= 0; i--) {
 
-        if (data == this->data[i]) {
+        if (data == this->getData()[i]) {
 
             ret = i;
             break;
@@ -132,22 +185,41 @@ int DynamicArray<T>::findLast(T data)
     return ret;
 }
 
+template <typename T>
+void DynamicArray<T>::bubblesort()
+{
+    int length = this->getSize();
+
+    if (length <= 1) return;
+
+    while (length > 1) {
+
+        int n = 0;
+
+        for (unsigned int i = 1; i < length; i++) {
+
+            if (this->getData()[i - 1] > this->getData()[i]) {
+
+                T tmp = this->getData()[i];
+                this->getData()[i] = this->getData()[i - 1];
+                this->getData()[i - 1] = tmp;
+                n = i;
+            }
+        }
+        length = n;
+    }
+}
+
 int main(void)
 {
     DynamicArray<int> *da = new DynamicArray<int>(0);
-    
-    for (unsigned int i = 0; i < 10; i++) {
+
+    for (int i = 10000; i >= 0; i--) {
 
         da->append(i);
     }
 
-    da->display();
-
-    int index = da->findFirst(10);
-    int index1 = da->findLast(3);
-
-
-    cout << index << " :: " << index1 << endl;
+    da->bubblesort();
 
     return 0;
 }

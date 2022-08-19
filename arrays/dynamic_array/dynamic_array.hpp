@@ -20,9 +20,12 @@ class DynamicArray
 
         int getSize() { return this->used; }
         int getCapacity() { return this->size; }
+        T *getData() { return this->data; }
+        void setSize(int newSize);
+        void setCapacity(int newCap);
+        void setData(T *newData);
 
         void expand(unsigned int newSpace);
-        void shrink();
 
         void append(T data);
         void chop();
